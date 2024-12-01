@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Symptom Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f3f4f6;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .mb-4 { margin-bottom: 16px; }
+        .font-bold { font-weight: bold; }
+        .text-center { text-align: center; }
+        .bg-blue-50 { background-color: #ebf8ff; }
+        .bg-yellow-50 { background-color: #fefcbf; }
+        .bg-green-50 { background-color: #f0fff4; }
+        .bg-gray-50 { background-color: #f7fafc; }
+        .list-disc { list-style-type: disc; }
+        .pl-5 { padding-left: 20px; }
+        .hidden { display: none; }
+        .alert-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+        }
+        .alert-dialog.active {
+            visibility: visible;
+        }
+        .alert-dialog-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+        }
+        .alert-dialog-footer {
+            display: flex;
+            justify-content: space-between;
+        }
+        input, textarea{
+          padding: 10px;
+          border-radius: 25px;
+        }
+        textarea{
+          margin-bottom: -20px;
+        }
+        
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1 class="text-center font-bold">AI Symptom Checker</h1>
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Enter Your Symptoms (comma-separated)</label>
+        <input type="text" id="symptoms" placeholder="e.g. fever, headache, cough" class="w-full" />
+    </div>
+    <div class="mb-4">
+        <label class="block mb-2 font-semibold">Additional Context (Optional)</label>
+        <textarea id="additionalInfo" placeholder="Provide any additional health information" class="w-full"></textarea>
+    </div>
+    <button id="checkSymptoms" class="w-full">Check Symptoms</button>
+
+    <div id="analysisResult" class="hidden">
+        <h2 class="text-xl font-bold mb-4">Analysis Results</h2>
+        <div class="bg-blue-50 p-4 rounded-lg mb-4">
+            <h3 class="font-semibold mb-2">Potential Conditions:</h3>
+            <ul id="conditionsList" class="list-disc pl-5"></ul>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg mb-4">
+            <h3 class="font-semibold mb-2">Severity: <span id="severity"></span></h3>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg mb-4">
+            <h3 class="font-semibold mb-2">Recommendations:</h3>
+            <ul id="recommendationsList" class="list-disc pl-5"></ul>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg mb-4">
+            <h3 class="font-semibold mb-2">Additional Notes:</h3>
+            <p id="additionalNotes"></p>
+        </div>
+        <button id="disclaimerButton" class="w-full">Disclaimer & Next Steps</button>
+    </div>
+</div>
+
+<div id="alertDialog" class="alert-dialog">
+    <div class="alert-dialog-content">
+        <h2>Important Health Notice</h2>
+        <p>This AI Symptom Checker provides preliminary guidance only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a healthcare professional for accurate medical guidance.</p>
+        <div class="alert -dialog-footer">
+            <button id="closeDialog">Close</button>
+            <button id="understand">Understand</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const symptomDatabase = {
+        'fever': { 
+            conditions: ['Flu', 'COVID-19', 'Common Cold'],
+            severity: 'moderate',
+            recommendations: [
+                'Rest and hydrate',
+                'Monitor temperature',
+                'Consider over-the-counter fever reducers'
+            ]
+        },
+        'headache': {
+            conditions: ['Migraine', 'Tension Headache', 'Dehydration'],
+            severity: 'mild',
+            recommendations: [
+                'Stay hydrated',
+                'Rest in a quiet, dark room',
+                'Consider pain relievers'
+            ]
+        },
+        'cough': {
+            conditions: ['Common Cold', 'Bronchitis', 'Allergies'],
+            severity: 'mild to moderate',
+            recommendations: [
+                'Use cough suppressants',
+                'Stay hydrated',
+                'Rest'
+            ]
+        }
+    };
+
+    const analyzeSymptoms = (symptoms, additionalInfo) => {
+        const matchedConditions = symptoms.toLowerCase().split(',')
+            .map(symptom => symptom.trim())
+            .filter(symptom => symptomDatabase[symptom])
+            .map(symptom => symptomDatabase[symptom]);
+
+        return {
+            conditions: matchedConditions.map(c => c.conditions).flat(),
+            severity: matchedConditions.length > 0 
+                ? matchedConditions.reduce((max, curr) => 
+                    ['mild', 'moderate', 'severe'].indexOf(curr.severity) > 
+                    ['mild', 'moderate', 'severe'].indexOf(max) 
+                        ? curr.severity : max, 'mild') : 'No conditions matched',
+            recommendations: matchedConditions.flatMap(c => c.recommendations),
+            additionalNotes: additionalInfo || 'No additional context provided.'
+        };
+    };
+
+    document.getElementById('checkSymptoms').addEventListener('click', () => {
+        const symptoms = document.getElementById('symptoms').value;
+        const additionalInfo = document.getElementById('additionalInfo').value;
+        const result = analyzeSymptoms(symptoms, additionalInfo);
+
+        document.getElementById('conditionsList').innerHTML = result.conditions.map(condition => `<li>${condition}</li>`).join('');
+        document.getElementById('severity').innerText = result.severity;
+        document.getElementById('recommendationsList').innerHTML = result.recommendations.map(rec => `<li>${rec}</li>`).join('');
+        document.getElementById('additionalNotes').innerText = result.additionalNotes;
+
+        document.getElementById('analysisResult').classList.remove('hidden');
+    });
+
+    document.getElementById('disclaimerButton').addEventListener('click', () => {
+        document.getElementById('alertDialog').classList.add('active');
+    });
+
+    document.getElementById('closeDialog').addEventListener('click', () => {
+        document.getElementById('alertDialog').classList.remove('active');
+    });
+
+    document.getElementById('understand').addEventListener('click', () => {
+        document.getElementById('alertDialog').classList.remove('active');
+    });
+</script>
+
+</body>
+</html>
